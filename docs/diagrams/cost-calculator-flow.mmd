@@ -1,0 +1,55 @@
+flowchart TD
+    subgraph "Frontend Components"
+        A[User Interface] --> B[Input Form]
+        B --> C{Client Validation}
+        C -->|Valid| D[API Request]
+        C -->|Invalid| E[Show Error]
+        D --> F[Loading State]
+        F --> G{API Response}
+        G -->|Success| H[Display Result]
+        G -->|Error| E
+    end
+
+    subgraph "API Layer"
+        D --> J[Cost Calculator API]
+        J --> K{Server Validation}
+        K -->|Valid| L[Calculate Total]
+        K -->|Invalid| M[Error Response]
+        L --> N[Format Response]
+        N --> O[Return JSON]
+        M --> P[Return Error]
+    end
+
+    subgraph "Data Flow"
+        B -->|"materials: number\nlabor: number\noverhead: number"| D
+        L -->|"totalCost = materials + labor + overhead"| N
+        O -->|"{ totalCost, breakdown, timestamp }"| G
+        P -->|"{ error: string }"| G
+    end
+
+    subgraph "Utilities"
+        Q[Currency Formatter]
+        R[i18n Translations]
+        S[Form Validation]
+        
+        B --> R
+        B --> S
+        H --> Q
+        E --> R
+    end
+
+    subgraph "Authentication"
+        T[NextAuth Session]
+        T --> A
+        T -->|"Protect Route"| J
+    end
+    
+    classDef primary fill:#4672b4,color:white,stroke:#333,stroke-width:1px
+    classDef secondary fill:#47956f,color:white,stroke:#333,stroke-width:1px
+    classDef warning fill:#de953e,color:white,stroke:#333,stroke-width:1px
+    classDef error fill:#8b251e,color:white,stroke:#333,stroke-width:1px
+    
+    class A,B,H,Q,R primary
+    class J,K,L,N,O secondary
+    class C,S,T warning
+    class E,M,P error

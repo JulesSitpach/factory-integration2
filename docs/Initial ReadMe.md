@@ -21,6 +21,37 @@ Factory Integration is a modular, event-driven platform that connects ERP, MES, 
 
 ---
 
+## Core Apps & SMB Value
+
+- **Cost Calculator:**  
+  Instantly calculates landed costs and tariffs for uploaded purchase orders.  
+  _SMB Benefit:_ Prevents margin loss, enables accurate pricing, and helps SMBs react quickly to tariff changes.
+
+- **Suppliers:**  
+  Centralizes supplier data, performance, and risk.  
+  _SMB Benefit:_ Reduces supply chain risk, enables fast supplier pivots, and supports compliance.
+
+- **Supply Chain Planner:**  
+  Visualizes and optimizes supply chain routes and inventory.  
+  _SMB Benefit:_ Minimizes stockouts and overstock, reduces logistics costs, and improves customer satisfaction.
+
+- **Pricing Optimizer:**  
+  Models pricing scenarios and suggests optimal prices based on costs and market data.  
+  _SMB Benefit:_ Protects margins, increases competitiveness, and automates complex pricing decisions.
+
+- **Tariff Tracker:**  
+  Monitors and alerts on tariff changes for relevant products and countries.  
+  _SMB Benefit:_ Prevents surprise costs, enables proactive planning, and supports compliance.
+
+- **Route Optimizer:**  
+  Finds the most cost-effective and timely shipping routes.  
+  _SMB Benefit:_ Reduces shipping costs and delivery times, improving customer experience.
+
+- **Settings & Help:**  
+  Easy configuration and in-app support for all users.
+
+---
+
 ## 1. User Stories
 
 **Format:**  

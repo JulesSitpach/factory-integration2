@@ -1,135 +1,143 @@
 /**
- * Currency Formatter Utility
+ * Currency formatter utility for TradeNavigatorPro
+ * Provides functions for formatting and converting currency values
+ */
+
+// Supported currencies
+export type SupportedCurrency = 'USD' | 'EUR' | 'GBP' | 'CNY' | 'JPY';
+
+// Currency conversion rates (placeholder - would be fetched from an API in production)
+// Rates are relative to USD (1 USD = X units of currency)
+const CONVERSION_RATES: Record<SupportedCurrency, number> = {
+  USD: 1.0,
+  EUR: 0.92,
+  GBP: 0.79,
+  CNY: 7.25,
+  JPY: 151.43,
+};
+
+// Currency symbols for display
+const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  CNY: '¥',
+  JPY: '¥',
+};
+
+// Default locale mapping for currencies
+const DEFAULT_LOCALES: Record<SupportedCurrency, string> = {
+  USD: 'en-US',
+  EUR: 'de-DE',
+  GBP: 'en-GB',
+  CNY: 'zh-CN',
+  JPY: 'ja-JP',
+};
+
+/**
+ * Format a number as currency with the specified currency code
  *
- * This module provides utilities for validating, parsing, and formatting currency values
- * to be used consistently throughout the application.
- */
-
-/**
- * Validates if a value is a valid currency amount
- * @param value - The value to validate (can be string, number, or any other type)
- * @returns boolean - True if the value is a valid non-negative number
- */
-export function isValidCurrencyValue(value: any): boolean {
-  // Handle string inputs by attempting to convert to number
-  if (typeof value === 'string') {
-    // Remove currency symbols, commas and spaces
-    const cleanedValue = value.replace(/[$£€,\s]/g, '');
-    // Try to parse as float
-    const numValue = parseFloat(cleanedValue);
-    return !isNaN(numValue) && numValue >= 0;
-  }
-
-  // Handle number inputs directly
-  if (typeof value === 'number') {
-    return !isNaN(value) && value >= 0;
-  }
-
-  // Any other type is invalid
-  return false;
-}
-
-/**
- * Parses a value into a valid currency number
- * @param value - The value to parse (string or number)
- * @returns number - The parsed number value or NaN if invalid
- */
-export function parseCurrencyValue(value: string | number): number {
-  if (typeof value === 'number') {
-    return isNaN(value) ? NaN : value;
-  }
-
-  if (typeof value === 'string') {
-    // Remove currency symbols, commas and spaces
-    const cleanedValue = value.replace(/[$£€,\s]/g, '');
-    return parseFloat(cleanedValue);
-  }
-
-  return NaN;
-}
-
-/**
- * Formats a number as a currency string
- * @param value - The number to format
- * @param locale - The locale to use for formatting (defaults to 'en-US')
- * @param currency - The currency code to use (defaults to 'USD')
- * @param options - Additional Intl.NumberFormat options
- * @returns string - The formatted currency string
+ * @param value - The numeric value to format
+ * @param currency - The currency code (USD, EUR, etc.)
+ * @param locale - Optional locale override (defaults based on currency)
+ * @returns Formatted currency string
  */
 export function formatCurrency(
   value: number,
-  locale: string = 'en-US',
-  currency: string = 'USD',
-  options: Partial<Intl.NumberFormatOptions> = {}
+  currency: SupportedCurrency = 'USD',
+  locale?: string
 ): string {
-  // Default options for currency formatting
-  const defaultOptions: Intl.NumberFormatOptions = {
+  const formattingLocale = locale || DEFAULT_LOCALES[currency];
+  const formatter = new Intl.NumberFormat(formattingLocale, {
     style: 'currency',
-    currency,
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  };
-
-  // Merge default options with provided options
-  const formatOptions = { ...defaultOptions, ...options };
-
-  // Format the value
-  return new Intl.NumberFormat(locale, formatOptions).format(value);
-}
-
-/**
- * Formats a value as a currency string, handling validation and parsing
- * @param value - The value to format (string or number)
- * @param locale - The locale to use for formatting
- * @param currency - The currency code to use
- * @param fallback - The fallback value to return if the input is invalid
- * @returns string - The formatted currency string or fallback value
- */
-export function safeCurrencyFormat(
-  value: string | number,
-  locale: string = 'en-US',
-  currency: string = 'USD',
-  fallback: string = '$0.00'
-): string {
-  const parsedValue = parseCurrencyValue(value);
-
-  if (isNaN(parsedValue)) {
-    return fallback;
-  }
-
-  return formatCurrency(parsedValue, locale, currency);
-}
-
-/**
- * Gets the appropriate currency symbol for a given locale and currency
- * @param locale - The locale to use
- * @param currency - The currency code
- * @returns string - The currency symbol
- */
-export function getCurrencySymbol(
-  locale: string = 'en-US',
-  currency: string = 'USD'
-): string {
-  const formatter = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
   });
-
-  const parts = formatter.formatToParts(0);
-  const currencyPart = parts.find(part => part.type === 'currency');
-  return currencyPart ? currencyPart.value : currency;
+  return formatter.format(value);
 }
 
 /**
- * Calculates total from an array of currency values
- * @param values - Array of currency values to sum
- * @returns number - The sum of all valid values
+ * Format a number as currency with a simple display format (no locale-specific formatting)
+ *
+ * @param value - The numeric value to format
+ * @param currency - The currency code
+ * @returns Simple formatted currency string
  */
-export function calculateCurrencyTotal(values: (string | number)[]): number {
-  return values
-    .map(value => parseCurrencyValue(value))
-    .filter(value => !isNaN(value))
-    .reduce((sum, value) => sum + value, 0);
+export function formatCurrencySimple(
+  value: number,
+  currency: SupportedCurrency = 'USD'
+): string {
+  const symbol = CURRENCY_SYMBOLS[currency];
+  const formattedValue = value.toFixed(2);
+  if (currency === 'JPY') {
+    return `${symbol}${Math.round(value)}`;
+  }
+  return `${symbol}${formattedValue}`;
+}
+
+/**
+ * Convert a value from one currency to another
+ * Note: In production, this would use real-time exchange rates from an API
+ *
+ * @param value - The value to convert
+ * @param fromCurrency - Source currency
+ * @param toCurrency - Target currency
+ * @returns Converted value
+ */
+export function convertCurrency(
+  value: number,
+  fromCurrency: SupportedCurrency,
+  toCurrency: SupportedCurrency
+): number {
+  if (fromCurrency === toCurrency) {
+    return value;
+  }
+  const valueInUSD = value / CONVERSION_RATES[fromCurrency];
+  return valueInUSD * CONVERSION_RATES[toCurrency];
+}
+
+/**
+ * Format a value after converting it from one currency to another
+ *
+ * @param value - The value to convert and format
+ * @param fromCurrency - Source currency
+ * @param toCurrency - Target currency
+ * @param locale - Optional locale for formatting
+ * @returns Formatted currency string after conversion
+ */
+export function formatConvertedCurrency(
+  value: number,
+  fromCurrency: SupportedCurrency,
+  toCurrency: SupportedCurrency,
+  locale?: string
+): string {
+  const convertedValue = convertCurrency(value, fromCurrency, toCurrency);
+  return formatCurrency(convertedValue, toCurrency, locale);
+}
+
+/**
+ * Get the exchange rate between two currencies
+ *
+ * @param fromCurrency - Source currency
+ * @param toCurrency - Target currency
+ * @returns Exchange rate (1 unit of fromCurrency = X units of toCurrency)
+ */
+export function getExchangeRate(
+  fromCurrency: SupportedCurrency,
+  toCurrency: SupportedCurrency
+): number {
+  return CONVERSION_RATES[toCurrency] / CONVERSION_RATES[fromCurrency];
+}
+
+/**
+ * Check if a string is a valid supported currency
+ *
+ * @param currency - Currency code to check
+ * @returns Whether the currency is supported
+ */
+export function isSupportedCurrency(
+  currency: string
+): currency is SupportedCurrency {
+  return currency in CONVERSION_RATES;
 }

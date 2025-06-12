@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { Database } from '../../types/database.types';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -91,11 +90,9 @@ export function createSupabaseAdmin() {
   if (typeof window !== 'undefined') {
     throw new Error('createSupabaseAdmin can only be used on the server');
   }
-
   if (!supabaseServiceRoleKey) {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
   }
-
   return createSupabaseClient({}, true);
 }
 
@@ -105,7 +102,10 @@ export function createSupabaseAdmin() {
  * @param customMessage - Optional custom error message
  * @returns Formatted error object
  */
-export function handleSupabaseError(error: any, customMessage?: string): Error {
+export function handleSupabaseError(
+  error: unknown,
+  customMessage?: string
+): Error {
   console.error('Supabase error:', error);
 
   // Format the error message
@@ -118,7 +118,6 @@ export function handleSupabaseError(error: any, customMessage?: string): Error {
 
   // Add the original error as a property
   (formattedError as any).originalError = error;
-
   return formattedError;
 }
 
@@ -141,7 +140,6 @@ export const factoryDb = {
     }
   ) {
     const admin = createSupabaseAdmin();
-
     try {
       const { data: calculation, error } = await admin
         .from('cost_calculations')
@@ -157,20 +155,17 @@ export const factoryDb = {
         })
         .select()
         .single();
-
       if (error) throw error;
       return calculation;
     } catch (error) {
       throw handleSupabaseError(error, 'Failed to save cost calculation');
     }
   },
-
   /**
    * Retrieves cost calculations for a user
    */
   async getUserCostCalculations(userId: string, limit = 10, offset = 0) {
     const client = createSupabaseAdmin();
-
     try {
       const { data, error, count } = await client
         .from('cost_calculations')
@@ -178,34 +173,29 @@ export const factoryDb = {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
-
       if (error) throw error;
       return { data, count };
     } catch (error) {
       throw handleSupabaseError(error, 'Failed to retrieve cost calculations');
     }
   },
-
   /**
    * Gets a user profile by ID
    */
   async getUserProfile(userId: string) {
     const client = createSupabaseClient();
-
     try {
       const { data, error } = await client
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
-
       if (error) throw error;
       return data;
     } catch (error) {
       throw handleSupabaseError(error, 'Failed to retrieve user profile');
     }
   },
-
   /**
    * Updates a user profile
    */
@@ -219,7 +209,6 @@ export const factoryDb = {
     }>
   ) {
     const client = createSupabaseClient();
-
     try {
       const { data, error } = await client
         .from('user_profiles')
@@ -227,25 +216,21 @@ export const factoryDb = {
         .eq('id', userId)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     } catch (error) {
       throw handleSupabaseError(error, 'Failed to update user profile');
     }
   },
-
   /**
    * Gets active integrations
    */
   async getActiveIntegrations() {
     const client = createSupabaseClient();
-
     try {
       const { data, error } = await client
         .from('active_integrations')
         .select('*');
-
       if (error) throw error;
       return data;
     } catch (error) {

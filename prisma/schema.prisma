@@ -1,16 +1,249 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["factory_app"]
 }
 
-// Add your data models here
-// Example:
-// model User {
-//   id    Int     @id @default(autoincrement())
-//   email String  @unique
-//   name  String?
-// }
+// Custom enums matching the database schema
+enum UserRole {
+  admin
+  engineer
+  operator
+  viewer
+
+  @@schema("factory_app")
+}
+
+enum IntegrationType {
+  erp
+  mes
+  scada
+  iot
+  database
+  api
+  file
+  custom
+
+  @@schema("factory_app")
+}
+
+enum IntegrationStatus {
+  active
+  inactive
+  error
+  configuring
+
+  @@schema("factory_app")
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+
+  @@schema("factory_app")
+}
+
+// User profiles (extends Supabase auth.users)
+model UserProfile {
+  id          String   @id @db.Uuid
+  fullName    String?  @map("full_name")
+  role        UserRole @default(viewer)
+  department  String?
+  employeeId  String?  @unique @map("employee_id")
+  preferences Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz()
+
+  // Relationships
+  costCalculations  CostCalculation[] @relation("UserToCostCalculations")
+  createdConfigs    IntegrationConfig[] @relation("UserToCreatedConfigs")
+  updatedConfigs    IntegrationConfig[] @relation("UserToUpdatedConfigs")
+  createdMappings   DataMapping[] @relation("UserToCreatedMappings")
+  createdJobs       IntegrationJob[] @relation("UserToCreatedJobs")
+  auditLogs         AuditLog[] @relation("UserToAuditLogs")
+
+  @@map("user_profiles")
+  @@schema("factory_app")
+}
+
+// Cost calculations history
+model CostCalculation {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  materials   Decimal  @db.Decimal(15, 2)
+  labor       Decimal  @db.Decimal(15, 2)
+  overhead    Decimal  @db.Decimal(15, 2)
+  totalCost   Decimal  @map("total_cost") @db.Decimal(15, 2)
+  name        String?
+  description String?
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relationships
+  user UserProfile? @relation("UserToCostCalculations", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], name: "idx_cost_calculations_user_id")
+  @@index([createdAt], name: "idx_cost_calculations_created_at")
+  @@map("cost_calculations")
+  @@schema("factory_app")
+}
+
+// System integration configurations
+model IntegrationConfig {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name            String
+  description     String?
+  integrationType IntegrationType   @map("integration_type")
+  config          Json
+  credentials     Json?             @default("{}")
+  status          IntegrationStatus @default(inactive)
+  lastConnectedAt DateTime?         @map("last_connected_at") @db.Timestamptz()
+  createdById     String?           @map("created_by") @db.Uuid
+  updatedById     String?           @map("updated_by") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime          @default(now()) @map("updated_at") @db.Timestamptz()
+
+  // Relationships
+  createdBy     UserProfile?      @relation("UserToCreatedConfigs", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     UserProfile?      @relation("UserToUpdatedConfigs", fields: [updatedById], references: [id], onDelete: SetNull)
+  dataMappings  DataMapping[]     @relation("IntegrationToMappings")
+  jobs          IntegrationJob[]  @relation("IntegrationToJobs")
+
+  @@index([integrationType], name: "idx_integration_configs_type")
+  @@index([status], name: "idx_integration_configs_status")
+  @@map("integration_configs")
+  @@schema("factory_app")
+}
+
+// Integration data mappings
+model DataMapping {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  integrationId     String   @map("integration_id") @db.Uuid
+  name              String
+  description       String?
+  sourcePath        String   @map("source_path")
+  targetPath        String   @map("target_path")
+  transformationLogic Json?   @default("{}") @map("transformation_logic")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdById       String?  @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz()
+
+  // Relationships
+  integration IntegrationConfig @relation("IntegrationToMappings", fields: [integrationId], references: [id], onDelete: Cascade)
+  createdBy   UserProfile?      @relation("UserToCreatedMappings", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([integrationId], name: "idx_data_mappings_integration_id")
+  @@map("data_mappings")
+  @@schema("factory_app")
+}
+
+// Integration jobs
+model IntegrationJob {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  integrationId String    @map("integration_id") @db.Uuid
+  jobType       String    @map("job_type")
+  status        JobStatus @default(pending)
+  payload       Json?
+  result        Json?
+  errorMessage  String?   @map("error_message")
+  startedAt     DateTime? @map("started_at") @db.Timestamptz()
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz()
+  createdById   String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relationships
+  integration IntegrationConfig @relation("IntegrationToJobs", fields: [integrationId], references: [id], onDelete: Cascade)
+  createdBy   UserProfile?      @relation("UserToCreatedJobs", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([integrationId], name: "idx_integration_jobs_integration_id")
+  @@index([status], name: "idx_integration_jobs_status")
+  @@index([createdAt], name: "idx_integration_jobs_created_at")
+  @@map("integration_jobs")
+  @@schema("factory_app")
+}
+
+// Audit log
+model AuditLog {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String
+  entityType String  @map("entity_type")
+  entityId  String?  @map("entity_id") @db.Uuid
+  oldValues Json?    @map("old_values")
+  newValues Json?    @map("new_values")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relationships
+  user UserProfile? @relation("UserToAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], name: "idx_audit_log_user_id")
+  @@index([entityType, entityId], name: "idx_audit_log_entity")
+  @@index([createdAt], name: "idx_audit_log_created_at")
+  @@map("audit_log")
+  @@schema("factory_app")
+}
+
+// Supplier management
+model Supplier {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  name             String
+  country          String
+  productCategories String[] @map("product_categories")
+  contactEmail     String?  @map("contact_email")
+  contactPhone     String?  @map("contact_phone")
+  website          String?
+  verified         Boolean  @default(false)
+  rating           Float?
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz()
+
+  @@index([userId], name: "idx_suppliers_user_id")
+  @@index([country], name: "idx_suppliers_country")
+  @@map("suppliers")
+  @@schema("factory_app")
+}
+
+// Pricing optimizations
+model PricingOptimization {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId    String   @map("product_id")
+  productName  String   @map("product_name")
+  targetMargin Float    @map("target_margin")
+  scenarios    Json
+  recommendations Json
+  sensitivityAnalysis Json @map("sensitivity_analysis")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("pricing_optimizations")
+  @@schema("factory_app")
+}
+
+// User optimization history
+model UserOptimizationHistory {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  productId      String   @map("product_id")
+  productName    String   @map("product_name")
+  optimizationType String  @map("optimization_type")
+  targetMargin   Float?   @map("target_margin")
+  scenarioCount  Int      @map("scenario_count")
+  resultId       String   @map("result_id")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([userId], name: "idx_user_optimization_history_user_id")
+  @@map("user_optimization_history")
+  @@schema("factory_app")
+}

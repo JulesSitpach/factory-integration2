@@ -29,13 +29,11 @@ export const getAuth = cache(async (): Promise<AuthResult> => {
   try {
     // Create a Supabase client using server component client
     const supabase = createServerComponentClient({ cookies });
-
     // Get the current session
     const {
       data: { session },
       error,
     } = await supabase.auth.getSession();
-
     if (error) {
       console.error('Authentication error:', error);
       return {
@@ -45,7 +43,6 @@ export const getAuth = cache(async (): Promise<AuthResult> => {
         isAuthenticated: false,
       };
     }
-
     return {
       session,
       user: session?.user || null,
@@ -75,13 +72,11 @@ export async function getAuthForRoute(): Promise<AuthResult> {
   try {
     // Create a Supabase client using route handler client
     const supabase = createRouteHandlerClient({ cookies });
-
     // Get the current session
     const {
       data: { session },
       error,
     } = await supabase.auth.getSession();
-
     if (error) {
       console.error('Authentication error in route handler:', error);
       return {
@@ -91,7 +86,6 @@ export async function getAuthForRoute(): Promise<AuthResult> {
         isAuthenticated: false,
       };
     }
-
     return {
       session,
       user: session?.user || null,

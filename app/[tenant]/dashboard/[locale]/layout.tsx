@@ -1,22 +1,22 @@
-import { Sidebar } from '@/components/Sidebar'
-import { Header } from '@/components/Header'
+import { Sidebar } from '@/components/Sidebar';
+import { Header } from '@/components/Header';
 
 export default function DashboardLayout({
   children,
   params,
 }: {
-  children: React.ReactNode
-  params: { tenant: string; locale: string }
+  children: React.ReactNode;
+  params: { locale: string };
 }) {
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar tenant={params.tenant} locale={params.locale} />
+      <Sidebar locale={params.locale} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header tenant={params.tenant} locale={params.locale} />
+        <Header locale={params.locale} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {children}
         </main>
       </div>
     </div>
-  )
+  );
 }
